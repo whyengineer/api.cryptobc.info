@@ -10,7 +10,7 @@ func Test_sms(t *testing.T){
 	a.Hourchange="3131"
 	a.Username="frankie"
 	a.Nowprice="31313"
-	err:=SendSms("13916434614",a)
+	err:=SendSms("18262622659",a)
 	if err!= nil{
 		log.Println(err)
 	}

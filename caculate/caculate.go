@@ -3,25 +3,145 @@ package caculate
 import (
 	"strconv"
 	"time"
-
+	"log"
 	"github.com/whyengineer/api.cryptobc.info/market"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
+type Cal struct{
 
-func StartCaculate(a interface{}) {
-	//huobi
-	huobi, ok := a.(market.HuobiMarket)
+}
+
+type TradeDayRes struct{
+	gorm.Model
+	Year int
+	Month int
+	Day int
+	CoinType string
+	LowPrice float64
+	LowPriceTime time.Time
+	HighPrice float64
+	HighPriceTime time.Time
+	FinalPrice float64
+}
+type TradeInfo struct{
+	BuyAmount float64
+	SellAmount float64
+	Price float64
+	CoinType string
+	Ts int64  //for 1min ts/60*60
+}
+var dayDone chan struct{}
+var minDataChan chan TradeInfo
+var dayRes TradeDayRes
+
+func writeDb() error{
+	year,mon,day:=time.Now().Date()
+	dayRes.Year=year
+	dayRes.Month=int(mon)
+	dayRes.Day=day
+	//create the connect
+	db, err := gorm.Open("mysql", "test:12345678@tcp(123.56.216.29:3306)/coins?charset=utf8&parseTime=True&loc=Local")
+	if err != nil {
+		return err
+	}
+	db.AutoMigrate(&TradeInfo{},&TradeDayRes{})
+	go func(){
+		defer db.Close()
+		for{
+			select{
+			case mindata:=<-minDataChan:
+				db.Create(&mindata)
+				log.Println(mindata)
+			case <-dayDone:
+				db.Create(&dayRes)
+				log.Println(dayRes)
+				year,mon,day:=time.Now().Date()
+				dayRes.Year=year
+				dayRes.Month=int(mon)
+				dayRes.Day=day
+			}
+		}
+	}()
+
+	return err
+
+}
+func EachCal(cointype string,m interface{}){
+	huobi, ok := m.(*market.HuobiMarket)
 	if ok {
-		pairl := len(huobi.Pair)
-		keyl := make([]string, pairl)
-		go func() {
-			secondTick := time.Tick(time.Second)
-			for {
-				nowTime := <-secondTick
-				ts := int64(nowTime.Unix())
-				for i, val := range huobi.Pair {
-					keyl[i] = val + ":" + strconv.FormatInt(ts, 10)
+		secondTick := time.Tick(time.Second)
+		minTick:=time.Tick(time.Minute)
+		for{
+			select{
+			case secTime := <-secondTick:
+				ts := int64(secTime.Unix())-1
+				key:= cointype + ":" + strconv.FormatInt(ts, 10)
+				_,ok:=huobi.HotData[key]
+				if ok {
+					//log.Println(data)	
 				}
+			case minTime:=<-minTick:
+				ts := int64(minTime.Unix())
+				var fdata market.CalInfo
+				var j int
+				for i:=ts;i>ts-60;i--{
+					key:= cointype + ":" + strconv.FormatInt(i, 10)
+					data,ok:=huobi.HotData[key]
+					if ok {
+						fdata.BuyAmount+=data.BuyAmount
+						fdata.SellAmount+=data.SellAmount
+						fdata.Price+=data.Price
+						j++
+					}
+				}
+				if j!=0{
+					fdata.Price/=float64(j)
+				}
+				var xx TradeInfo
+				xx.Ts=ts/60*60//1mindata
+				xx.CoinType=cointype
+				xx.BuyAmount=fdata.BuyAmount
+				xx.SellAmount=fdata.SellAmount
+				xx.Price=fdata.Price
+				minDataChan<-xx
+			}
+			
+			
+		}
+	}
+	
+}
+func Start(a interface{}) {
+	minDataChan=make(chan TradeInfo)
+	dayDone=make(chan struct{})
+	go func(){
+		for{
+			now:=time.Now()
+			next := now.Add(time.Hour * 24)
+			next=time.Date(now.Year(),now.Month(),now.Day(),0,0,0,0,now.Location())
+			t := time.NewTimer(next.Sub(now))
+			<-t.C
+			dayDone<-struct{}{}
+		}
+		
+	}()
+	//start db
+	err:=writeDb()
+	if err !=nil{
+		log.Println(err)
+		return 
+	}
+	//huobi
+	huobi, ok := a.(*market.HuobiMarket)
+	if ok {
+		go func() {	
+			for _, val := range huobi.Pair {
+				//caculate each coin
+				go EachCal(val,a)
 			}
 		}()
+	}else{
+		log.Println("format error")
 	}
 }

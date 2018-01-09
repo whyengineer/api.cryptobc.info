@@ -13,7 +13,6 @@ type CoinInfo struct {
 
 
 type CalInfo struct{
-	CoinType string
 	BuyAmount float64
 	SellAmount float64
 	Price float64

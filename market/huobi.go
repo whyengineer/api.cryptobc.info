@@ -69,7 +69,7 @@ func NewHuobiMarket(url string,pair []string) (*HuobiMarket){
 	hm.HotData=make(map[string]CalInfo)
 	hm.Url=url
 	hm.Pair=append(hm.Pair,pair...)
-	rawdata=make(chan CoinInfo)
+	rawdata=make(chan CoinInfo,10)
 	go hm.calCT()
 	return hm
 }
@@ -155,7 +155,7 @@ func (hm *HuobiMarket)calCT(){
 						eachCal[j].Price/=float64(num[j])
 						key:=val+":"+strconv.FormatInt(nowts[j],10)
 						hm.HotData[key]=eachCal[j]
-						//log.Println(val,j,eachCal[j])
+						//log.Println(eachCal[j])
 					}
 					nowts[j]=data.Ts/1000
 					num[j]=0

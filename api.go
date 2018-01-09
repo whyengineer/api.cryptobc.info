@@ -1,7 +1,7 @@
 package main
 
 import(
-	//"github.com/whyengineer/api.cryptobc.info/notice"
+	"github.com/whyengineer/api.cryptobc.info/caculate"
 	"github.com/whyengineer/api.cryptobc.info/httpd"
 	"log"
 	"os"
@@ -18,6 +18,8 @@ func main(){
 		log.Println(err)
 		return
 	}
+	caculate.Start(huobi)
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs,os.Interrupt)
 	<-sigs
