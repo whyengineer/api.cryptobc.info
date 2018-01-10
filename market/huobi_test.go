@@ -1,17 +1,17 @@
 package market
 
-import(
-	"testing"
+import (
 	"log"
-	"time"
+	"testing"
 )
-func Test_huobi(t *testing.T){
-	a:=NewHuobiMarket("wss://api.huobi.pro/ws",[]string{"btcusdt","ethusdt"})
-	err:=a.Connect()
+
+func Test_huobi(t *testing.T) {
+	a, err := NewHuobiMarket("wss://api.huobi.pro/ws", []string{"btcusdt", "ethusdt", "eosusdt"})
 	if err != nil {
 		log.Println(err)
 	}
-	for{
-		time.Sleep(time.Second*10)
+	for {
+		b := <-a
+		log.Println(b)
 	}
 }

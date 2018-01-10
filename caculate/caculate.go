@@ -10,33 +10,120 @@ import (
 	"github.com/whyengineer/api.cryptobc.info/market"
 )
 
+var dbChan chan map[string]StaInfo
+
 type Cal struct {
+	HotEx   string
+	HotData map[string]market.CoinInfo //second hot data
+	Db      *gorm.DB
+	M       *market.Market
+
+	eachPC map[string]chan market.CoinInfo
+	eachDC map[string]chan market.CoinInfo
+
+	min1  map[string]StaInfo
+	min5  map[string]StaInfo
+	min30 map[string]StaInfo
+	hour1 map[string]StaInfo
+	hour4 map[string]StaInfo
+	day   map[string]StaInfo
 }
 
-type TradeDayRes struct {
-	gorm.Model
-	Year          int
-	Month         int
-	Day           int
-	CoinType      string
-	LowPrice      float64
-	LowPriceTime  time.Time
-	HighPrice     float64
-	HighPriceTime time.Time
-	FinalPrice    float64
-}
-type TradeInfo struct {
+type StaInfo struct {
+	Prop       string
+	CoinType   string
 	BuyAmount  float64
 	SellAmount float64
-	Price      float64
-	CoinType   string
-	Ts         int64 //for 1min ts/60*60
+	HighPrice  float64
+	HighTs     int64
+	LowPrice   float64
+	LowTs      int64
+	StartPrice float64
+	EndPrie    float64
 }
 
-var dayDone chan struct{}
-var minDataChan chan TradeInfo
-var dayRes TradeDayRes
+//new market data
+func New(m *market.Market, hot string) (*Cal, error) {
+	var err error
+	a := new(Cal)
+	a.HotData = make(map[string]market.CoinInfo)
+	a.HotEx = hot
+	a.M = m
+	a.eachDC = make(map[string]chan market.CoinInfo)
+	a.eachPC = make(map[string]chan market.CoinInfo)
+	//each every chan
+	for _, val := range m.Piars {
+		a.eachDC[val] = make(chan market.CoinInfo, 5)
+	}
+	//each every platform
+	for _, val := range m.ExP {
+		a.eachPC[val] = make(chan market.CoinInfo, 5)
+	}
+	// a.min1 = new(map[string]StaInfo)
+	// a.min5 = new(map[string]StaInfo)
+	// a.min30 = new(map[string]StaInfo)
+	// a.hour1 = new(map[string]StaInfo)
+	// a.hour4 = new(map[string]StaInfo)
+	// a.day = new(map[string]StaInfo)
 
+	//db channel
+	dbChan := make(chan map[string]StaInfo, 10)
+	//conect Db
+	a.Db, err = gorm.Open("mysql", "test:12345678@tcp(123.56.216.29:3306)/coins?charset=utf8&parseTime=True&loc=Local")
+	if err != nil {
+		return nil, err
+	}
+	//migrate the table
+	a.Migrate()
+	//
+}
+func (m *Cal) Migrate() {
+	m.Db.AutoMigrate(&Min1TradeTable{}, &Min5TradeTable{}, &Min30TradeTable{}, &Hour1TradeTable{}, &Hour4TradeTable{}, &DayTradeTable{})
+}
+func (m *Cal) CalStaSend(sta StaInfo, num int) {
+	if num != 0 {
+
+	}
+}
+func (c *Cal) Distribute() {
+	c.DistributePlat()
+	for _, plat := range c.M.ExP {
+		c.DistributeCoin(plat)
+	}
+
+}
+func (c *Cal) Calculate() {
+
+}
+func (c *Cal) DistributeCoin(flat string) {
+	go func() {
+		for {
+			//get the data from the platform channle
+			coin := <-m.eachPC[plat]
+			//save hot data
+			m.eachDC[coin.CoinType] <- coin
+		}
+
+	}()
+}
+func (c *Cal) DistributePlat() {
+	for plat, datac := range m.M.DataCh {
+		go func() {
+			for {
+				//the exchang data
+				each := <-datac
+				//save hot data
+				if m.HotEx == plat {
+					key := each.CoinType + ":" + strconv.FormatInt(each.Ts, 10)
+					m.HotData[key] = each
+				}
+				//to each plat
+				m.eachPC[plat] <- each
+			}
+
+		}()
+	}
+}
 func writeDb() error {
 	year, mon, day := time.Now().Date()
 	dayRes.Year = year
@@ -72,6 +159,7 @@ func writeDb() error {
 	return err
 
 }
+
 func EachCal(cointype string, m interface{}) {
 	huobi, ok := m.(*market.HuobiMarket)
 	if ok {
@@ -84,6 +172,7 @@ func EachCal(cointype string, m interface{}) {
 				key := cointype + ":" + strconv.FormatInt(ts, 10)
 				data, ok := huobi.HotData[key]
 				if ok {
+					log.Println(data)
 					if dayRes.HighPrice < data.Price || dayRes.HighPrice == 0 {
 						dayRes.HighPrice = data.Price
 						dayRes.HighPriceTime = secTime

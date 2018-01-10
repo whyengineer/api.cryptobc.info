@@ -1,20 +1,27 @@
 package market
 
-import(
-	"log"
-	"github.com/gorilla/websocket"
+import (
+	"bytes"
 	"compress/gzip"
-	"regexp"
-	"time"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"bytes"	
-	"errors"
-	"encoding/json"
-	"strconv"
+	"log"
+	"regexp"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
+type HuobiInfo struct {
+	CoinType string
+	Amount   float64
+	Price    float64
+	Dir      string
+	Ts       int64
+}
 
 //huobi json format
 
@@ -35,7 +42,6 @@ type MarketDepth struct {
 	depth  string
 }
 
-
 type HuobiDT struct {
 	Ch   string     `json:ch`
 	Ts   int64      `json:ts`
@@ -53,27 +59,35 @@ type HuobiDTone1 struct {
 	Direction string  `json:"direction"`
 	Ts        int64   `json:ts`
 }
+
 //channel
-var rawdata chan CoinInfo
+var rawdata chan HuobiInfo
 
-
-type HuobiMarket struct{
-	Url string    		//wss://api.huobi.pro/ws
-	Pair []string 		//such as ethusdt btcusdt eosusdt
-	HotData map[string]CalInfo //hot data Pair[]:Ts
-	wsc *websocket.Conn
-} 
-
-func NewHuobiMarket(url string,pair []string) (*HuobiMarket){
-	hm:=new(HuobiMarket)
-	hm.HotData=make(map[string]CalInfo)
-	hm.Url=url
-	hm.Pair=append(hm.Pair,pair...)
-	rawdata=make(chan CoinInfo,10)
-	go hm.calCT()
-	return hm
+type HuobiMarket struct {
+	Url  string   //wss://api.huobi.pro/ws
+	Pair []string //such as ethusdt btcusdt eosusdt
+	Wsc  *websocket.Conn
+	Data chan CoinInfo
 }
-func(hm *HuobiMarket) SubTopic(topic int, v interface{}) error {
+
+func NewHuobiMarket(url string, pair []string) (chan CoinInfo, error) {
+	a := make(chan CoinInfo)
+
+	hm := new(HuobiMarket)
+	hm.Url = url
+	hm.Pair = append(hm.Pair, pair...)
+	hm.Data = a
+
+	rawdata = make(chan HuobiInfo, 10)
+
+	err := hm.Connect()
+	if err != nil {
+		return a, err
+	}
+	go hm.calCT()
+	return a, nil
+}
+func (hm *HuobiMarket) SubTopic(topic int, v interface{}) error {
 	sub := new(Sub)
 	if topic == 1 {
 		sub.Id = "id1"
@@ -97,98 +111,81 @@ func(hm *HuobiMarket) SubTopic(topic int, v interface{}) error {
 		log.Println("json parse err:", err)
 		return err
 	}
-	err = hm.wsc.WriteMessage(websocket.TextMessage, ret)
+	err = hm.Wsc.WriteMessage(websocket.TextMessage, ret)
 	return err
 }
 
-func (hm *HuobiMarket)Connect() error{
+func (hm *HuobiMarket) Connect() error {
 	var err error
-	
-	hm.wsc,_,err= websocket.DefaultDialer.Dial(hm.Url,nil)
+
+	hm.Wsc, _, err = websocket.DefaultDialer.Dial(hm.Url, nil)
 	log.Println("start connect huobi websocket")
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 	go hm.ReadCT()
-	for i:=range hm.Pair{
-		err=hm.SubTopic(3,hm.Pair[i])
-		if err!=nil{
+	for i := range hm.Pair {
+		err = hm.SubTopic(3, hm.Pair[i])
+		if err != nil {
 			return err
 		}
 	}
 	return err
 }
-func (hm *HuobiMarket)calCT(){
+func (hm *HuobiMarket) calCT() {
 	//realse memory
-	ts:= time.Now().Unix()
-	go func(){
-		//contain 1hour data
-		time.Sleep(time.Hour)
-		log.Println("start delete the timeout data")
-		secondTick:=time.Tick(1*time.Second)
-		for{
-			<-secondTick
-			for _,val:=range hm.Pair{
-				key:=val+":"+strconv.FormatInt(ts,10)
-				delete(hm.HotData,key)
-			}
-			ts++
-			
-		}
-	}()
-	pairl:=len(hm.Pair)
-	var num []int
-	var nowts []int64
-	var eachCal []CalInfo
-	for i:=0;i< pairl;i++{
-		nowts=append(nowts,0)
-		num=append(num,0)
-		eachCal=append(eachCal,CalInfo{})
-	}
-	for{
-		data:=<-rawdata
-		for j,val:=range hm.Pair {
-			if data.CoinType==val{
-				if nowts[j]!=data.Ts/1000 {
-					if nowts[j]!=0{
+	//ts := time.Now().Unix()
+	pairl := len(hm.Pair)
+	num := make([]int, pairl)
+	nowts := make([]int64, pairl)
+	eachCal := make([]CoinInfo, pairl)
+	for {
+		data := <-rawdata
+		for j, val := range hm.Pair {
+			if data.CoinType == val {
+				if nowts[j] != data.Ts/1000 {
+					if nowts[j] != 0 {
 						//write the last calinfo
-						eachCal[j].Price/=float64(num[j])
-						key:=val+":"+strconv.FormatInt(nowts[j],10)
-						hm.HotData[key]=eachCal[j]
+						eachCal[j].CoinType = val
+						eachCal[j].Price /= float64(num[j])
+						eachCal[j].Ts = nowts[j]
+						//key := val + ":" + strconv.FormatInt(nowts[j], 10)
+						//hm.HotData[key] = eachCal[j]
 						//log.Println(eachCal[j])
+						hm.Data <- eachCal[j]
 					}
-					nowts[j]=data.Ts/1000
-					num[j]=0
-					eachCal[j].BuyAmount=0
-					eachCal[j].SellAmount=0
-					eachCal[j].Price=0
+					nowts[j] = data.Ts / 1000
+					num[j] = 0
+					eachCal[j].BuyAmount = 0
+					eachCal[j].SellAmount = 0
+					eachCal[j].Price = 0
 				}
 				num[j]++
-				if data.Dir=="buy"{
-					eachCal[j].BuyAmount+=data.Amount
-				}else{
-					eachCal[j].SellAmount+=data.Amount
+				if data.Dir == "buy" {
+					eachCal[j].BuyAmount += data.Amount
+				} else {
+					eachCal[j].SellAmount += data.Amount
 				}
-				eachCal[j].Price+=data.Price
-				
+				eachCal[j].Price += data.Price
+
 			}
 		}
-		
+
 	}
 }
-func (hm *HuobiMarket)ReadCT(){
-	for{
-		_, message, err := hm.wsc.ReadMessage()
-		if err !=nil{
+func (hm *HuobiMarket) ReadCT() {
+	for {
+		_, message, err := hm.Wsc.ReadMessage()
+		if err != nil {
 			log.Println("read:", err)
-			hm.wsc.Close()
+			hm.Wsc.Close()
 			log.Println("restart connect")
-			for{
-				err:=hm.Connect()
-				if err!=nil{
-					log.Println("open websocket err:",err)
+			for {
+				err := hm.Connect()
+				if err != nil {
+					log.Println("open websocket err:", err)
 					time.Sleep(time.Second)
-				}else{
+				} else {
 					break
 				}
 			}
@@ -204,7 +201,7 @@ func (hm *HuobiMarket)ReadCT(){
 		zr.Close()
 	}
 }
-func(hm *HuobiMarket)handlerReceive(info io.Reader) {
+func (hm *HuobiMarket) handlerReceive(info io.Reader) {
 	// io.Copy(os.Stdout, info)
 	a, _ := ioutil.ReadAll(info)
 	// log.Println(string(a))
@@ -220,7 +217,7 @@ func(hm *HuobiMarket)handlerReceive(info io.Reader) {
 			log.Println("json encode err:", err)
 			return
 		}
-		err = hm.wsc.WriteMessage(websocket.TextMessage, ret1)
+		err = hm.Wsc.WriteMessage(websocket.TextMessage, ret1)
 		if err != nil {
 			log.Println("websocket write err:", err)
 			return
@@ -233,24 +230,22 @@ func(hm *HuobiMarket)handlerReceive(info io.Reader) {
 	}
 	if _, err := data["ch"]; err {
 		trade := HuobiDT{}
-		err:=json.Unmarshal(a, &trade)
-		if err!=nil{
-			log.Println("json Unmarshal error",err)
+		err := json.Unmarshal(a, &trade)
+		if err != nil {
+			log.Println("json Unmarshal error", err)
 		}
 		re := regexp.MustCompile(`^market\.(.*?)\.trade\.detail$`)
-		a:=new(CoinInfo)
-		a.CoinType=re.FindStringSubmatch(trade.Ch)[1]
+		a := new(HuobiInfo)
+		a.CoinType = re.FindStringSubmatch(trade.Ch)[1]
 		for _, v := range trade.Tick.Data {
-			a.Ts=v.Ts
-			a.Amount=v.Amount
-			a.Dir=v.Direction
-			a.Price=v.Price
-			a.Prop="huobi"
-			rawdata<-*a
+			a.Ts = v.Ts
+			a.Amount = v.Amount
+			a.Dir = v.Direction
+			a.Price = v.Price
+
+			rawdata <- *a
 		}
 		return
 	}
 
 }
-
-
