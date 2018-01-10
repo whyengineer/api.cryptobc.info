@@ -1,13 +1,13 @@
 package caculate
 
-type Min1TradeTable{
-	Prop string
-	CoinType string
-	Year int
-	Month int
-	Day   int
-	Hour int
-	Min int
+type Min1TradeTable struct {
+	Prop       string
+	CoinType   string
+	Year       int
+	Month      int
+	Day        int
+	Hour       int
+	Min        int
 	BuyAmount  float64
 	SellAmount float64
 	HighPrice  float64
@@ -17,14 +17,14 @@ type Min1TradeTable{
 	StartPrice float64
 	EndPrie    float64
 }
-type Min5TradeTable{
-	Prop string
-	CoinType string
-	Year int
-	Month int
-	Day   int
-	Hour int
-	Min int
+type Min5TradeTable struct {
+	Prop       string
+	CoinType   string
+	Year       int
+	Month      int
+	Day        int
+	Hour       int
+	Min        int
 	BuyAmount  float64
 	SellAmount float64
 	HighPrice  float64
@@ -34,14 +34,14 @@ type Min5TradeTable{
 	StartPrice float64
 	EndPrie    float64
 }
-type Min30TradeTable{
-	Prop string
-	CoinType string
-	Year int
-	Month int
-	Day   int
-	Hour int
-	Min int
+type Min30TradeTable struct {
+	Prop       string
+	CoinType   string
+	Year       int
+	Month      int
+	Day        int
+	Hour       int
+	Min        int
 	BuyAmount  float64
 	SellAmount float64
 	HighPrice  float64
@@ -51,13 +51,13 @@ type Min30TradeTable{
 	StartPrice float64
 	EndPrie    float64
 }
-type Hour1TradeTable{
-	Prop string
-	CoinType string
-	Year int
-	Month int
-	Day   int
-	Hour int
+type Hour1TradeTable struct {
+	Prop       string
+	CoinType   string
+	Year       int
+	Month      int
+	Day        int
+	Hour       int
 	BuyAmount  float64
 	SellAmount float64
 	HighPrice  float64
@@ -67,13 +67,13 @@ type Hour1TradeTable{
 	StartPrice float64
 	EndPrie    float64
 }
-type Hour4TradeTable{
-	Prop string
-	CoinType string
-	Year int
-	Month int
-	Day   int
-	Hour int
+type Hour4TradeTable struct {
+	Prop       string
+	CoinType   string
+	Year       int
+	Month      int
+	Day        int
+	Hour       int
 	BuyAmount  float64
 	SellAmount float64
 	HighPrice  float64
@@ -83,12 +83,12 @@ type Hour4TradeTable{
 	StartPrice float64
 	EndPrie    float64
 }
-type DayTradeTable{
-	Prop string
-	CoinType string
-	Year int
-	Month int
-	Day   int
+type DayTradeTable struct {
+	Prop       string
+	CoinType   string
+	Year       int
+	Month      int
+	Day        int
 	BuyAmount  float64
 	SellAmount float64
 	HighPrice  float64

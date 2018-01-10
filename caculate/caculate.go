@@ -3,7 +3,6 @@ package caculate
 import (
 	"log"
 	"strconv"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -18,7 +17,6 @@ type Cal struct {
 	Db      *gorm.DB
 	M       *market.Market
 
-	eachPC map[string]chan market.CoinInfo
 	eachDC map[string]chan market.CoinInfo
 
 	min1  map[string]StaInfo
@@ -50,15 +48,15 @@ func New(m *market.Market, hot string) (*Cal, error) {
 	a.HotEx = hot
 	a.M = m
 	a.eachDC = make(map[string]chan market.CoinInfo)
-	a.eachPC = make(map[string]chan market.CoinInfo)
 	//each every chan
-	for _, val := range m.Piars {
-		a.eachDC[val] = make(chan market.CoinInfo, 5)
+	for _, plat := range m.ExP {
+		for _, coin := range m.Pairs {
+			key := plat + coin
+			a.eachDC[key] = make(chan market.CoinInfo, 5)
+			go a.Calculate(a.eachDC[key])
+		}
 	}
-	//each every platform
-	for _, val := range m.ExP {
-		a.eachPC[val] = make(chan market.CoinInfo, 5)
-	}
+
 	// a.min1 = new(map[string]StaInfo)
 	// a.min5 = new(map[string]StaInfo)
 	// a.min30 = new(map[string]StaInfo)
@@ -67,7 +65,7 @@ func New(m *market.Market, hot string) (*Cal, error) {
 	// a.day = new(map[string]StaInfo)
 
 	//db channel
-	dbChan := make(chan map[string]StaInfo, 10)
+	//dbChan := make(chan map[string]StaInfo, 10)
 	//conect Db
 	a.Db, err = gorm.Open("mysql", "test:12345678@tcp(123.56.216.29:3306)/coins?charset=utf8&parseTime=True&loc=Local")
 	if err != nil {
@@ -76,54 +74,47 @@ func New(m *market.Market, hot string) (*Cal, error) {
 	//migrate the table
 	a.Migrate()
 	//
+	a.DistributeCoin()
+
+	return a, err
 }
 func (m *Cal) Migrate() {
 	m.Db.AutoMigrate(&Min1TradeTable{}, &Min5TradeTable{}, &Min30TradeTable{}, &Hour1TradeTable{}, &Hour4TradeTable{}, &DayTradeTable{})
 }
-func (m *Cal) CalStaSend(sta StaInfo, num int) {
-	if num != 0 {
 
-	}
-}
-func (c *Cal) Distribute() {
-	c.DistributePlat()
-	for _, plat := range c.M.ExP {
-		c.DistributeCoin(plat)
-	}
+func (c *Cal) Calculate(data chan market.CoinInfo) {
+	var stadata StaInfo
+	var min1j,min5j int
+	for {
+		coin := <-data
+		log.Println(coin)
+		if coin.Ts%60==0{
 
-}
-func (c *Cal) Calculate() {
-
-}
-func (c *Cal) DistributeCoin(flat string) {
-	go func() {
-		for {
-			//get the data from the platform channle
-			coin := <-m.eachPC[plat]
-			//save hot data
-			m.eachDC[coin.CoinType] <- coin
 		}
-
-	}()
+		stadata.CoinType=coin.CoinType
+		stadata.BuyAmount+=
+	}
 }
-func (c *Cal) DistributePlat() {
-	for plat, datac := range m.M.DataCh {
+func (c *Cal) DistributeCoin() {
+	for plat, datac := range c.M.DataCh {
 		go func() {
 			for {
 				//the exchang data
 				each := <-datac
 				//save hot data
-				if m.HotEx == plat {
+				if c.HotEx == plat {
 					key := each.CoinType + ":" + strconv.FormatInt(each.Ts, 10)
-					m.HotData[key] = each
+					c.HotData[key] = each
 				}
-				//to each plat
-				m.eachPC[plat] <- each
+				//to each coin
+				c.eachDC[plat+each.CoinType] <- each
 			}
 
 		}()
 	}
 }
+
+/*
 func writeDb() error {
 	year, mon, day := time.Now().Date()
 	dayRes.Year = year
@@ -246,3 +237,4 @@ func Start(a interface{}) {
 		log.Println("format error")
 	}
 }
+*/
