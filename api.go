@@ -1,26 +1,28 @@
 package main
 
-import(
-	"github.com/whyengineer/api.cryptobc.info/caculate"
-	"github.com/whyengineer/api.cryptobc.info/httpd"
+import (
 	"log"
 	"os"
 	"os/signal"
+
+	"github.com/whyengineer/api.cryptobc.info/caculate"
+	"github.com/whyengineer/api.cryptobc.info/httpd"
 	"github.com/whyengineer/api.cryptobc.info/market"
 )
 
-func main(){
+func main() {
 	httpd.HttpdCT()
 	log.Println("start httpd")
-	huobi:=market.NewHuobiMarket("wss://api.huobi.pro/ws",[]string{"btcusdt","ethusdt","eosusdt"})
-	err:=huobi.Connect()
-	if err!=nil{
+	m, err := market.New([]string{"huobi"}, []string{"btcusdt", "ethusdt", "eosusdt"})
+	if err != nil {
 		log.Println(err)
-		return
 	}
-	caculate.Start(huobi)
-
+	_, err = caculate.New(m, "huobi")
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("start")
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs,os.Interrupt)
+	signal.Notify(sigs, os.Interrupt)
 	<-sigs
 }
