@@ -11,16 +11,18 @@ import (
 )
 
 func main() {
-	httpd.HttpdCT()
-	log.Println("start httpd")
+
 	m, err := market.New([]string{"huobi"}, []string{"btcusdt", "ethusdt", "eosusdt"})
 	if err != nil {
 		log.Println(err)
 	}
-	_, err = caculate.New(m, "huobi")
+	cal, err := caculate.New(m, "huobi")
 	if err != nil {
 		log.Println(err)
 	}
+	httpd.HttpdCT(cal)
+	log.Println("start httpd")
+
 	log.Println("start")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)

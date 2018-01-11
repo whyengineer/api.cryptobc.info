@@ -1,12 +1,16 @@
 package caculate
 
 import (
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm"
 )
 
 type Min1TradeTable struct {
+	Id         int `gorm:"AUTO_INCREMENT;primary_key" json:"-"`
+	TimeKey    int `gorm:"index;type:bigint" json:"-"`
 	Prop       string
 	CoinType   string
 	Year       int
@@ -24,6 +28,8 @@ type Min1TradeTable struct {
 	EndPrie    float64
 }
 type Min5TradeTable struct {
+	Id         int `gorm:"AUTO_INCREMENT;primary_key" json:"-"`
+	TimeKey    int `gorm:"index;type:bigint" json:"-"`
 	Prop       string
 	CoinType   string
 	Year       int
@@ -41,6 +47,8 @@ type Min5TradeTable struct {
 	EndPrie    float64
 }
 type Min30TradeTable struct {
+	Id         int `gorm:"AUTO_INCREMENT;primary_key" json:"-"`
+	TimeKey    int `gorm:"index;type:bigint" json:"-"`
 	Prop       string
 	CoinType   string
 	Year       int
@@ -58,6 +66,8 @@ type Min30TradeTable struct {
 	EndPrie    float64
 }
 type Hour1TradeTable struct {
+	Id         int `gorm:"AUTO_INCREMENT;primary_key" json:"-"`
+	TimeKey    int `gorm:"index;type:bigint" json:"-"`
 	Prop       string
 	CoinType   string
 	Year       int
@@ -74,6 +84,8 @@ type Hour1TradeTable struct {
 	EndPrie    float64
 }
 type Hour4TradeTable struct {
+	Id         int `gorm:"AUTO_INCREMENT;primary_key" json:"-"`
+	TimeKey    int `gorm:"index;type:bigint" json:"-"`
 	Prop       string
 	CoinType   string
 	Year       int
@@ -90,6 +102,8 @@ type Hour4TradeTable struct {
 	EndPrie    float64
 }
 type DayTradeTable struct {
+	Id         int `gorm:"AUTO_INCREMENT;primary_key" json:"-"`
+	TimeKey    int `gorm:"index;type:bigint" json:"-"`
 	Prop       string
 	CoinType   string
 	Year       int
@@ -113,6 +127,8 @@ func WriteMin1(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.Year = t.Year()
 	tb.Hour = t.Hour()
 	tb.Min = t.Minute()
+	tmp := fmt.Sprintf("%04d%02d%02d%02d%02d", tb.Year, tb.Month, tb.Day, tb.Hour, tb.Min)
+	tb.TimeKey, _ = strconv.Atoi(tmp)
 	//data
 	tb.BuyAmount = d.BuyAmount
 	tb.SellAmount = d.SellAmount
@@ -134,6 +150,8 @@ func WriteMin5(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.Year = t.Year()
 	tb.Hour = t.Hour()
 	tb.Min = t.Minute()
+	tmp := fmt.Sprintf("%04d%02d%02d%02d%02d", tb.Year, tb.Month, tb.Day, tb.Hour, tb.Min)
+	tb.TimeKey, _ = strconv.Atoi(tmp)
 	//data
 	tb.BuyAmount = d.BuyAmount
 	tb.SellAmount = d.SellAmount
@@ -155,6 +173,8 @@ func WriteMin30(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.Year = t.Year()
 	tb.Hour = t.Hour()
 	tb.Min = t.Minute()
+	tmp := fmt.Sprintf("%04d%02d%02d%02d%02d", tb.Year, tb.Month, tb.Day, tb.Hour, tb.Min)
+	tb.TimeKey, _ = strconv.Atoi(tmp)
 	//data
 	tb.BuyAmount = d.BuyAmount
 	tb.SellAmount = d.SellAmount
@@ -175,6 +195,8 @@ func WriteHour1(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.Month = int(t.Month())
 	tb.Year = t.Year()
 	tb.Hour = t.Hour()
+	tmp := fmt.Sprintf("%04d%02d%02d%02d", tb.Year, tb.Month, tb.Day, tb.Hour)
+	tb.TimeKey, _ = strconv.Atoi(tmp)
 	//data
 	tb.BuyAmount = d.BuyAmount
 	tb.SellAmount = d.SellAmount
@@ -195,6 +217,8 @@ func WriteHour4(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.Month = int(t.Month())
 	tb.Year = t.Year()
 	tb.Hour = t.Hour()
+	tmp := fmt.Sprintf("%04d%02d%02d%02d", tb.Year, tb.Month, tb.Day, tb.Hour)
+	tb.TimeKey, _ = strconv.Atoi(tmp)
 	//data
 	tb.BuyAmount = d.BuyAmount
 	tb.SellAmount = d.SellAmount
@@ -214,6 +238,8 @@ func WriteDay(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.Day = t.Day()
 	tb.Month = int(t.Month())
 	tb.Year = t.Year()
+	tmp := fmt.Sprintf("%04d%02d%02d", tb.Year, tb.Month, tb.Day)
+	tb.TimeKey, _ = strconv.Atoi(tmp)
 	//data
 	tb.BuyAmount = d.BuyAmount
 	tb.SellAmount = d.SellAmount
