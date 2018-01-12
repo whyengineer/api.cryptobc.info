@@ -152,7 +152,7 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								th1.HighPrice = 0
 								th1.LowPrice = 0
 							}
-							if nowt.Hour()%4 == 0 {
+							if nowt.Hour()%4 == 0 && nowt.Minute()==0{
 								th4 := stal["hour4"]
 								th4.EndPrie = coin.Price
 								//save
@@ -164,7 +164,7 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								th4.HighPrice = 0
 								th4.LowPrice = 0
 							}
-							if nowt.Hour() == 0 {
+							if nowt.Hour() == 23 && nowt.Minute()==59 {
 								td := stal["day"]
 								td.EndPrie = coin.Price
 								//save
