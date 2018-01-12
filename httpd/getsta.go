@@ -44,52 +44,67 @@ func GetStaData(c echo.Context) error {
 			c.JSON(http.StatusOK, &d)
 		}
 	case "min5":
-		hour := c.QueryParam("hour")
-		min := c.QueryParam("min")
-		var d caculate.Min5TradeTable
-		if CalRes.Db.Where("year = ? AND month = ? AND day =? AND hour=? AND min=? AND prop=? AND coin_type=?",
-			year, month, day, hour, min, plat, coin).
-			Find(&d).RecordNotFound() {
+		hour, _ := strconv.Atoi(c.QueryParam("hour"))
+		min, _ := strconv.Atoi(c.QueryParam("min"))
+		var d []caculate.Min5TradeTable
+		tmp := fmt.Sprintf("%04d%02d%02d%02d%02d", year, month, day, hour, min)
+		key, _ := strconv.Atoi(tmp)
+		CalRes.Db.Debug()
+		if CalRes.Db.Where("time_key<=? AND prop=? AND coin_type=?",
+			key, plat, coin).Order("time_key desc").
+			Limit(num).Find(&d).RecordNotFound() {
 			return c.NoContent(http.StatusNoContent)
 		} else {
 			c.JSON(http.StatusOK, &d)
 		}
 	case "min30":
-		hour := c.QueryParam("hour")
-		min := c.QueryParam("min")
-		var d caculate.Min30TradeTable
-		if CalRes.Db.Where("year = ? AND month = ? AND day =? AND hour=? AND min=? AND prop=? AND coin_type=?",
-			year, month, day, hour, min, plat, coin).
-			Find(&d).RecordNotFound() {
+		hour, _ := strconv.Atoi(c.QueryParam("hour"))
+		min, _ := strconv.Atoi(c.QueryParam("min"))
+		var d []caculate.Min30TradeTable
+		tmp := fmt.Sprintf("%04d%02d%02d%02d%02d", year, month, day, hour, min)
+		key, _ := strconv.Atoi(tmp)
+		CalRes.Db.Debug()
+		if CalRes.Db.Where("time_key<=? AND prop=? AND coin_type=?",
+			key, plat, coin).Order("time_key desc").
+			Limit(num).Find(&d).RecordNotFound() {
 			return c.NoContent(http.StatusNoContent)
 		} else {
 			c.JSON(http.StatusOK, &d)
 		}
 	case "hour1":
-		hour := c.QueryParam("hour")
-		var d caculate.Hour1TradeTable
-		if CalRes.Db.Where("year = ? AND month = ? AND day =? AND hour=? AND prop=? AND coin_type=?",
-			year, month, day, hour, plat, coin).
-			Find(&d).RecordNotFound() {
+		hour, _ := strconv.Atoi(c.QueryParam("hour"))
+		var d []caculate.Hour1TradeTable
+		tmp := fmt.Sprintf("%04d%02d%02d%02d", year, month, day, hour)
+		key, _ := strconv.Atoi(tmp)
+		CalRes.Db.Debug()
+		if CalRes.Db.Where("time_key<=? AND prop=? AND coin_type=?",
+			key, plat, coin).Order("time_key desc").
+			Limit(num).Find(&d).RecordNotFound() {
 			return c.NoContent(http.StatusNoContent)
 		} else {
 			c.JSON(http.StatusOK, &d)
 		}
 	case "hour4":
-		hour := c.QueryParam("hour")
-		var d caculate.Hour4TradeTable
-		if CalRes.Db.Where("year = ? AND month = ? AND day =? AND hour=? AND prop=? AND coin_type=?",
-			year, month, day, hour, plat, coin).
-			Find(&d).RecordNotFound() {
+		hour, _ := strconv.Atoi(c.QueryParam("hour"))
+		var d []caculate.Hour4TradeTable
+		tmp := fmt.Sprintf("%04d%02d%02d%02d", year, month, day, hour)
+		key, _ := strconv.Atoi(tmp)
+		CalRes.Db.Debug()
+		if CalRes.Db.Where("time_key<=? AND prop=? AND coin_type=?",
+			key, plat, coin).Order("time_key desc").
+			Limit(num).Find(&d).RecordNotFound() {
 			return c.NoContent(http.StatusNoContent)
 		} else {
 			c.JSON(http.StatusOK, &d)
 		}
 	case "day":
-		var d caculate.DayTradeTable
-		if CalRes.Db.Where("year = ? AND month = ? AND day =? AND prop=? AND coin_type=?",
-			year, month, day, plat, coin).
-			Find(&d).RecordNotFound() {
+		var d []caculate.DayTradeTable
+		tmp := fmt.Sprintf("%04d%02d%02d", year, month, day)
+		key, _ := strconv.Atoi(tmp)
+		CalRes.Db.Debug()
+		if CalRes.Db.Where("time_key<=? AND prop=? AND coin_type=?",
+			key, plat, coin).Order("time_key desc").
+			Limit(num).Find(&d).RecordNotFound() {
 			return c.NoContent(http.StatusNoContent)
 		} else {
 			c.JSON(http.StatusOK, &d)
