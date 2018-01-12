@@ -36,8 +36,8 @@ func GetStaData(c echo.Context) error {
 		tmp := fmt.Sprintf("%04d%02d%02d%02d%02d", year, month, day, hour, min)
 		key, _ := strconv.Atoi(tmp)
 		CalRes.Db.Debug()
-		if CalRes.Db.Where("time_key<? AND prop=? AND coin_type=?",
-			key, plat, coin).
+		if CalRes.Db.Where("time_key<=? AND prop=? AND coin_type=?",
+			key, plat, coin).Order("time_key desc").
 			Limit(num).Find(&d).RecordNotFound() {
 			return c.NoContent(http.StatusNoContent)
 		} else {
