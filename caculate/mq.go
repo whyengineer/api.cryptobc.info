@@ -1,37 +1,38 @@
 package caculate
 
-import(
+import (
+	"errors"
+
 	"golang.org/x/sync/syncmap"
-	"log"
 )
 
-type Mq struct{
-	subtopic syncmap.Map
-	pubtopic syncmap.Map
+type Mq struct {
+	syncmap.Map
 }
 
-func NewMq() *Mq{
-	m:=new(Mq)
+func NewMq() *Mq {
+	m := new(Mq)
 	return m
 }
-func (m *Mq)Pub(topic string)chan StaInfo{
-	
-}
-func (m *Mq)Sub(topic string)chan StaInfo{
-	a:=make(chan StaInfo)
-	cl,ok:=m.subtopic.Load(topic)
-	acl,ok:=cl.([]chan StaInfo)
-	if ok{
-		if ok {
-			acl=append(acl,a)
-			m.subtopic.Store(topic,acl)
-		}else{
-			b:=[]chan StaInfo{a}
-			m.subtopic.Store(topic,b)
+func (m *Mq) Pub(data StaInfo) {
+	b := func(key, vaule interface{}) bool {
+		dc := vaule.(chan StaInfo)
+		select {
+		case dc <- data:
+
+		default:
+
 		}
-	}else{
-		log.Panic("assert failed")
-		
+		return true
 	}
-	return a
+	m.Range(b)
+}
+func (m *Mq) Sub(id string, data chan StaInfo) error {
+	_, ok := m.Load(id)
+	if ok {
+		errors.New("the id stored")
+	} else {
+		m.Store(id, data)
+	}
+	return nil
 }

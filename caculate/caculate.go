@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/sync/syncmap"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/whyengineer/api.cryptobc.info/market"
@@ -12,11 +14,17 @@ import (
 
 type Cal struct {
 	HotEx   string
-	HotData map[string]market.CoinInfo //second hot data
+	HotData syncmap.Map
 	Db      *gorm.DB
 	M       *market.Market
-
-	eachDC map[string]chan market.CoinInfo
+	SendS   *Mq
+	Min1S   *Mq
+	Min5S   *Mq
+	Min30S  *Mq
+	Hour1S  *Mq
+	Hour4S  *Mq
+	DayS    *Mq
+	eachDC  map[string]chan market.CoinInfo
 }
 
 type StaInfo struct {
@@ -36,10 +44,16 @@ type StaInfo struct {
 func New(m *market.Market, hot string) (*Cal, error) {
 	var err error
 	a := new(Cal)
-	a.HotData = make(map[string]market.CoinInfo)
 	a.HotEx = hot
 	a.M = m
 	a.eachDC = make(map[string]chan market.CoinInfo)
+	a.SendS = NewMq()
+	a.Min1S = NewMq()
+	a.Min5S = NewMq()
+	a.Min30S = NewMq()
+	a.Hour1S = NewMq()
+	a.Hour4S = NewMq()
+	a.DayS = NewMq()
 	//each every chan
 	for _, plat := range m.ExP {
 		for _, coin := range m.Pairs {
@@ -109,6 +123,7 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 							t1.EndPrie = coin.Price
 							//save
 							WriteMin1(nowt, *t1, c.Db)
+							c.Min1S.Pub(*t1)
 							//refresh
 							t1.StartPrice = coin.Price
 							t1.BuyAmount = 0
@@ -121,6 +136,7 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								t5.EndPrie = coin.Price
 								//save
 								WriteMin5(nowt, *t5, c.Db)
+								c.Min5S.Pub(*t5)
 								//refresh
 								t5.StartPrice = coin.Price
 								t5.BuyAmount = 0
@@ -133,6 +149,7 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								t30.EndPrie = coin.Price
 								//save
 								WriteMin30(nowt, *t30, c.Db)
+								c.Min1S.Pub(*t1)
 								//refresh
 								t30.StartPrice = coin.Price
 								t30.BuyAmount = 0
@@ -145,6 +162,7 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								th1.EndPrie = coin.Price
 								//save
 								WriteHour1(nowt, *th1, c.Db)
+								c.Hour1S.Pub(*th1)
 								//refresh
 								th1.StartPrice = coin.Price
 								th1.BuyAmount = 0
@@ -152,11 +170,12 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								th1.HighPrice = 0
 								th1.LowPrice = 0
 							}
-							if nowt.Hour()%4 == 0 && nowt.Minute()==0{
+							if nowt.Hour()%4 == 0 && nowt.Minute() == 0 {
 								th4 := stal["hour4"]
 								th4.EndPrie = coin.Price
 								//save
 								WriteHour4(nowt, *th4, c.Db)
+								c.Hour4S.Pub(*th4)
 								//refresh
 								th4.StartPrice = coin.Price
 								th4.BuyAmount = 0
@@ -164,11 +183,12 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 								th4.HighPrice = 0
 								th4.LowPrice = 0
 							}
-							if nowt.Hour() == 23 && nowt.Minute()==59 {
+							if nowt.Hour() == 23 && nowt.Minute() == 59 {
 								td := stal["day"]
 								td.EndPrie = coin.Price
 								//save
 								WriteDay(nowt, *td, c.Db)
+								c.DayS.Pub(*td)
 								//refresh
 								td.StartPrice = coin.Price
 								td.BuyAmount = 0
@@ -210,11 +230,12 @@ func (c *Cal) DistributeCoin() {
 			ts := nowt.Unix()
 			for _, coin := range c.M.Pairs {
 				key := coin + ":" + strconv.FormatInt(ts, 10)
-				delete(c.HotData, key)
+				c.HotData.Delete(key)
 			}
 
 		}
 	}()
+	//dis
 	for plat, datac := range c.M.DataCh {
 		go func() {
 			for {
@@ -223,7 +244,15 @@ func (c *Cal) DistributeCoin() {
 				//save hot data
 				if c.HotEx == plat {
 					key := each.CoinType + ":" + strconv.FormatInt(each.Ts, 10)
-					c.HotData[key] = each
+					c.HotData.Store(key, each)
+					rd := StaInfo{}
+					rd.BuyAmount = each.BuyAmount
+					rd.SellAmount = each.SellAmount
+					rd.StartPrice = each.Price
+					rd.EndPrie = each.Price
+					rd.Prop = plat
+					rd.CoinType = each.CoinType
+					c.SendS.Pub(rd)
 				}
 				//to each coin
 				c.eachDC[plat+each.CoinType] <- each

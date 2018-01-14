@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo"
 	"github.com/whyengineer/api.cryptobc.info/caculate"
+	"github.com/whyengineer/api.cryptobc.info/market"
 )
 
 func GetStaStatus(c echo.Context) error {
@@ -120,9 +121,10 @@ func GetSencodeData(c echo.Context) error {
 
 	for i := ts; i > ts-500; i-- {
 		key := coin + ":" + strconv.FormatInt(int64(i), 10)
-		data, ok := CalRes.HotData[key]
+		data, ok := CalRes.HotData.Load(key)
 		if ok {
-			return c.JSON(http.StatusOK, &data)
+			dataa := data.(market.CoinInfo)
+			return c.JSON(http.StatusOK, &dataa)
 		}
 	}
 	return c.NoContent(http.StatusNoContent)
