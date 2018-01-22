@@ -8,6 +8,7 @@ import (
 	"github.com/whyengineer/api.cryptobc.info/caculate"
 	"github.com/whyengineer/api.cryptobc.info/httpd"
 	"github.com/whyengineer/api.cryptobc.info/market"
+	"github.com/whyengineer/api.cryptobc.info/notice"
 )
 
 func main() {
@@ -22,8 +23,8 @@ func main() {
 	}
 	httpd.HttpdCT(cal)
 	log.Println("start httpd")
-
-	log.Println("start")
+	notice.NewNotic(cal)
+	log.Println("start notice")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)
 	<-sigs

@@ -140,7 +140,7 @@ func WriteMin1(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.HighTs = d.HighTs
 	tb.LowPrice = d.LowPrice
 	tb.LowTs = d.LowTs
-	db.Create(&tb)
+	//db.Create(&tb)
 }
 func WriteMin5(t time.Time, d StaInfo, db *gorm.DB) {
 	var tb Min5TradeTable
@@ -163,7 +163,7 @@ func WriteMin5(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.HighTs = d.HighTs
 	tb.LowPrice = d.LowPrice
 	tb.LowTs = d.LowTs
-	db.Create(&tb)
+	//db.Create(&tb)
 }
 func WriteMin30(t time.Time, d StaInfo, db *gorm.DB) {
 	var tb Min30TradeTable
@@ -186,7 +186,7 @@ func WriteMin30(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.HighTs = d.HighTs
 	tb.LowPrice = d.LowPrice
 	tb.LowTs = d.LowTs
-	db.Create(&tb)
+	//db.Create(&tb)
 }
 func WriteHour1(t time.Time, d StaInfo, db *gorm.DB) {
 	var tb Hour1TradeTable
@@ -208,7 +208,7 @@ func WriteHour1(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.HighTs = d.HighTs
 	tb.LowPrice = d.LowPrice
 	tb.LowTs = d.LowTs
-	db.Create(&tb)
+	//db.Create(&tb)
 }
 func WriteHour4(t time.Time, d StaInfo, db *gorm.DB) {
 	var tb Hour4TradeTable
@@ -230,7 +230,7 @@ func WriteHour4(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.HighTs = d.HighTs
 	tb.LowPrice = d.LowPrice
 	tb.LowTs = d.LowTs
-	db.Create(&tb)
+	//db.Create(&tb)
 }
 func WriteDay(t time.Time, d StaInfo, db *gorm.DB) {
 	var tb DayTradeTable
@@ -251,5 +251,5 @@ func WriteDay(t time.Time, d StaInfo, db *gorm.DB) {
 	tb.HighTs = d.HighTs
 	tb.LowPrice = d.LowPrice
 	tb.LowTs = d.LowTs
-	db.Create(&tb)
+	//db.Create(&tb)
 }
