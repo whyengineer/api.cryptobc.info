@@ -5,26 +5,27 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/sync/syncmap"
+	"encoding/json"
 
+	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/whyengineer/api.cryptobc.info/market"
 )
 
 type Cal struct {
-	HotEx   string
-	HotData syncmap.Map
-	Db      *gorm.DB
-	M       *market.Market
-	SendS   *Mq
-	Min1S   *Mq
-	Min5S   *Mq
-	Min30S  *Mq
-	Hour1S  *Mq
-	Hour4S  *Mq
-	DayS    *Mq
-	eachDC  map[string]chan market.CoinInfo
+	HotEx  string
+	RC     *redis.Client
+	Db     *gorm.DB
+	M      *market.Market
+	SendS  *Mq
+	Min1S  *Mq
+	Min5S  *Mq
+	Min30S *Mq
+	Hour1S *Mq
+	Hour4S *Mq
+	DayS   *Mq
+	eachDC map[string]chan market.CoinInfo
 }
 
 type StaInfo struct {
@@ -54,6 +55,16 @@ func New(m *market.Market, hot string) (*Cal, error) {
 	a.Hour1S = NewMq()
 	a.Hour4S = NewMq()
 	a.DayS = NewMq()
+	//start redis
+	a.RC = redis.NewClient(&redis.Options{
+		Addr:     "123.56.216.29:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	_, err = a.RC.Ping().Result()
+	if err != nil {
+		log.Panic("connect redis err:", err)
+	}
 	//each every chan
 	for _, plat := range m.ExP {
 		for _, coin := range m.Pairs {
@@ -221,20 +232,6 @@ func (c *Cal) Calculate(data chan market.CoinInfo, plat string, coin string) {
 	}()
 }
 func (c *Cal) DistributeCoin() {
-	//start garbage delete
-	go func() {
-		time.Sleep(time.Hour)
-		secondTick := time.Tick(time.Second)
-		for {
-			nowt := <-secondTick
-			ts := nowt.Unix()
-			for _, coin := range c.M.Pairs {
-				key := coin + ":" + strconv.FormatInt(ts, 10)
-				c.HotData.Delete(key)
-			}
-
-		}
-	}()
 	//dis
 	for plat, datac := range c.M.DataCh {
 		go func() {
@@ -243,8 +240,17 @@ func (c *Cal) DistributeCoin() {
 				each := <-datac
 				//save hot data
 				if c.HotEx == plat {
+					//log.Println(each)
 					key := each.CoinType + ":" + strconv.FormatInt(each.Ts, 10)
-					c.HotData.Store(key, each)
+					//c.HotData.Store(key, each)
+					t, err := json.Marshal(each)
+					if err != nil {
+						log.Panic("json encode err:", err)
+					}
+					err = c.RC.Set(key, string(t), time.Hour).Err()
+					if err != nil {
+						log.Panic("redis set err:", err)
+					}
 					rd := StaInfo{}
 					rd.BuyAmount = each.BuyAmount
 					rd.SellAmount = each.SellAmount

@@ -6,9 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/whyengineer/api.cryptobc.info/caculate"
-	"github.com/whyengineer/api.cryptobc.info/httpd"
 	"github.com/whyengineer/api.cryptobc.info/market"
-	"github.com/whyengineer/api.cryptobc.info/notice"
 )
 
 func main() {
@@ -17,14 +15,11 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	cal, err := caculate.New(m, "huobi")
+	_, err = caculate.New(m, "huobi")
 	if err != nil {
 		log.Println(err)
 	}
-	httpd.HttpdCT(cal)
-	log.Println("start httpd")
-	notice.NewNotic(cal)
-	log.Println("start notice")
+	//notice.NewNotic(cal)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)
 	<-sigs
